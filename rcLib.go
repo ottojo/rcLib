@@ -3,7 +3,6 @@ package rclib
 import (
 	"errors"
 	"log"
-	"math"
 )
 
 const STARTBYTE byte = 0xC9
@@ -130,7 +129,6 @@ func dataBytesCount(resolution Resolution, channelCount int) int {
 	} else {
 		return int(float64(totalBits)/8.0 + 1)
 	}
-	return int(math.Ceil((float64(resolution.BitsPerChannel()) * float64(channelCount)) / 8.0))
 }
 
 func (p *Package) decode(data byte) (bool, error) {
