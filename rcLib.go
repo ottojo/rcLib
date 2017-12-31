@@ -12,10 +12,6 @@ var DEBUG = false
 
 var globalUid byte
 
-func setDebug(enabled bool) {
-	DEBUG = enabled
-}
-
 func PackageEquals(a, b Package) bool {
 	if a.Header != b.Header {
 		return false
@@ -32,10 +28,6 @@ func PackageEquals(a, b Package) bool {
 	}
 
 	if a.Config.IsMeshPackage != b.Config.IsMeshPackage {
-		return false
-	}
-
-	if a.Config.Mesh != b.Config.Mesh {
 		return false
 	}
 
@@ -58,7 +50,7 @@ func PackageEquals(a, b Package) bool {
 type Package struct {
 	Header              Header
 	Config              Configuration
-	Channel             []uint16
+	Channel             []int
 	buffer              []byte
 	decodingState       int
 	decodedDataBytes    int
@@ -76,8 +68,7 @@ type Configuration struct {
 	Resolution    Resolution
 	Error         bool
 	IsMeshPackage bool
-	Mesh          byte
-	RoutingLength byte
+	RoutingLength int
 	//Additional    []byte
 }
 
@@ -159,11 +150,11 @@ func (p *Package) decode(data byte) (bool, error) {
 		logIfDebug("Channel count: %d\n", p.Config.ChannelCount)
 		p.totalDataBytesCount = dataBytesCount(p.Config.Resolution, p.Config.ChannelCount)
 		logIfDebug("Calculated total Data Bytes: %d\n", p.totalDataBytesCount)
-		p.Channel = make([]uint16, p.Config.ChannelCount)
+		p.Channel = make([]int, p.Config.ChannelCount)
 		p.Config.Error = (data >> 6 & 1) == 1
 		logIfDebug("Error bit set: %t\n", p.Config.Error)
 		// Following
-		if (data & (1 << 7)) == 1 {
+		if (data >> 7) == 1 {
 			logIfDebug("Following bit set. Decoding Mesh Byte next.\n")
 			p.decodingState = 4
 		} else {
@@ -173,10 +164,9 @@ func (p *Package) decode(data byte) (bool, error) {
 		p.decodedDataBytes = 0
 		break
 	case 4: // Mesh
+		logIfDebug("Found Mesh Byte: %b\n", data)
 		p.Config.IsMeshPackage = (data & 1) == 1
-		p.Config.Mesh = data
-
-		p.Config.RoutingLength = (data >> 1) & 15 /*0b1111*/
+		p.Config.RoutingLength = int((data >> 1) & 15 /*0b1111*/)
 		p.decodingState = 5
 		p.decodedDataBytes = 0
 		break
@@ -186,11 +176,14 @@ func (p *Package) decode(data byte) (bool, error) {
 			for c := 0; c < 8; c++ {
 				currentDataBit := 8*p.decodedDataBytes + c
 				currentChannel := currentDataBit / p.Config.Resolution.BitsPerChannel()
+				if currentChannel >= p.Config.ChannelCount {
+					// channelCount * bitsPerChannel < dataBytesCount
+					continue
+				}
 				currentChannelBit := currentDataBit - currentChannel*p.Config.Resolution.BitsPerChannel()
 				currentBitValue := (data >> uint(c)) & 1
 				logIfDebug("Data bit Nr %d (%d) is bit Nr %d of Channel %d\n", currentDataBit, currentBitValue, currentChannelBit, currentChannel)
-				bitShiftInChannel := uint(currentChannelBit)
-				p.Channel[currentChannel] |= uint16(currentBitValue << bitShiftInChannel)
+				p.Channel[currentChannel] |= int(currentBitValue) << uint(currentChannelBit)
 			}
 			p.decodedDataBytes = p.decodedDataBytes + 1
 			if p.decodedDataBytes >= p.totalDataBytesCount {
