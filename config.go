@@ -1,12 +1,17 @@
 package rclib
 
+import "encoding/json"
+
 type Configuration struct {
 	ChannelCount     int
 	Resolution       Resolution
 	Error            bool
-	IsMeshPackage    bool
 	RoutingLength    int
 	AdditionalConfig []byte
+}
+
+func (c *Configuration) IsMeshPackage() bool {
+	return c.RoutingLength != 0
 }
 
 func ConfigEquals(a, b Configuration) bool {
@@ -18,10 +23,6 @@ func ConfigEquals(a, b Configuration) bool {
 	}
 
 	if a.Error != b.Error {
-		return false
-	}
-
-	if a.IsMeshPackage != b.IsMeshPackage {
 		return false
 	}
 
@@ -48,9 +49,9 @@ func (c *Configuration) toBytes() []byte {
 		config[0] |= 1 << 6
 	}
 
-	if c.IsMeshPackage || c.RoutingLength != 0 || len(c.AdditionalConfig) != 0 {
+	if c.IsMeshPackage() || len(c.AdditionalConfig) != 0 {
 		config[0] |= 1 << 7
-		meshByte := byte(1) | byte(c.RoutingLength)<<1
+		meshByte := byte(c.RoutingLength)
 		config = append(config, meshByte)
 	}
 
@@ -94,4 +95,8 @@ func (r *Resolution) Steps() int {
 
 func (r *Resolution) BitsPerChannel() int {
 	return int((*r) + 5)
+}
+
+func (r Resolution) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.Steps())
 }

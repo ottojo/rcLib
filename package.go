@@ -53,15 +53,15 @@ func PackageEquals(a, b Package) bool {
 // Encode returns the encoded byte array of the package.
 // TxId should be an identifier unique to each sender/program/component
 // If uId is -1, it is set to the last seen UID + 1.
-func (p *Package) Encode(txId byte, uId int) []byte {
-	if uId == -1 {
-		uId = int(byte(lastSeenUid + 1))
+func (p *Package) Encode() []byte {
+	if p.Header.Uid == -1 {
+		p.Header.Uid = int(byte(lastSeenUid) + 1)
 	}
-	if byte(uId) > lastSeenUid {
-		lastSeenUid = byte(uId)
+	if byte(p.Header.Uid) > lastSeenUid {
+		lastSeenUid = byte(p.Header.Uid)
 	}
 
-	var result = []byte{STARTBYTE, byte(uId), p.Header.TransmitterId}
+	var result = []byte{STARTBYTE, byte(p.Header.Uid), p.Header.TransmitterId}
 	result = append(result, p.Config.toBytes()...)
 
 	encodedChannelData := make([]byte, dataBytesCount(p.Config.Resolution, p.Config.ChannelCount))
@@ -102,9 +102,9 @@ func (p *Package) Decode(dataByte byte) (complete bool, err error) {
 		}
 		break
 	case uid: // Start word received
-		p.Header.Uid = dataByte
+		p.Header.Uid = int(dataByte)
 		logIfDebug("Found UID Byte: 0x%X\n", dataByte)
-		lastSeenUid = p.Header.Uid
+		lastSeenUid = byte(p.Header.Uid)
 		p.decodingState = tid
 		break
 	case tid: // Transmitter Id
@@ -134,10 +134,9 @@ func (p *Package) Decode(dataByte byte) (complete bool, err error) {
 		p.decodedDataBytes = 0
 		break
 	case mesh: // Mesh
-		// TODO: Testcases for different mesh scenarios
 		logIfDebug("Found Mesh Byte: %b\n", dataByte)
-		p.Config.IsMeshPackage = (dataByte & 1) == 1
-		p.Config.RoutingLength = int((dataByte >> 1) & 15 /*0b1111*/)
+		p.Config.RoutingLength = int(dataByte & 15 /*0b1111*/)
+		logIfDebug("Routing length: %d\n", p.Config.RoutingLength)
 		if dataByte>>7 == 1 {
 			p.decodingState = additionalConfig
 		} else {
@@ -220,6 +219,6 @@ func DecodePackages(dataIn chan byte, packages chan Package) {
 }
 
 type Header struct {
-	Uid           byte
+	Uid           int
 	TransmitterId byte
 }
