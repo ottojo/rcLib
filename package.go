@@ -50,17 +50,15 @@ func PackageEquals(a, b Package) bool {
 	return true
 }
 
+func GetUid() byte {
+	lastSeenUid++
+	return lastSeenUid
+}
+
 // Encode returns the encoded byte array of the package.
 // TxId should be an identifier unique to each sender/program/component
 // If uId is -1, it is set to the last seen UID + 1.
 func (p *Package) Encode() []byte {
-	if p.Header.Uid == -1 {
-		p.Header.Uid = int(byte(lastSeenUid) + 1)
-	}
-	if byte(p.Header.Uid) > lastSeenUid {
-		lastSeenUid = byte(p.Header.Uid)
-	}
-
 	var result = []byte{STARTBYTE, byte(p.Header.Uid), p.Header.TransmitterId}
 	result = append(result, p.Config.toBytes()...)
 
@@ -102,7 +100,7 @@ func (p *Package) Decode(dataByte byte) (complete bool, err error) {
 		}
 		break
 	case uid: // Start word received
-		p.Header.Uid = int(dataByte)
+		p.Header.Uid = dataByte
 		logIfDebug("Found UID Byte: 0x%X\n", dataByte)
 		lastSeenUid = byte(p.Header.Uid)
 		p.decodingState = tid
@@ -219,6 +217,6 @@ func DecodePackages(dataIn chan byte, packages chan Package) {
 }
 
 type Header struct {
-	Uid           int
+	Uid           byte
 	TransmitterId byte
 }

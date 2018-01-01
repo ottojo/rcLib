@@ -100,3 +100,13 @@ func (r *Resolution) BitsPerChannel() int {
 func (r Resolution) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.Steps())
 }
+
+func (r *Resolution) UnmarshalJSON(data []byte) error {
+	var steps int
+	err := json.Unmarshal(data, &steps)
+	if err != nil {
+		return err
+	}
+	*r = ResolutionFromSteps(steps)
+	return nil
+}
