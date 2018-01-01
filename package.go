@@ -17,7 +17,7 @@ type Package struct {
 }
 
 const (
-	initial          = iota
+	initial = iota
 	uid
 	tid
 	config

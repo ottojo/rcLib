@@ -54,4 +54,3 @@ func dataBytesCount(resolution Resolution, channelCount int) int {
 		return int(float64(totalBits)/8.0 + 1)
 	}
 }
-

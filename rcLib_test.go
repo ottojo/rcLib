@@ -1,9 +1,9 @@
 package rclib
 
 import (
-	"testing"
 	"encoding/json"
 	"reflect"
+	"testing"
 )
 
 type testCase struct {
@@ -29,7 +29,7 @@ func TestPackage_Decode(t *testing.T) {
 			Input: []byte{0xc9, 0x1, 0x0, 0x16, 0x1, 0x18, 0x83, 0xc, 0xfe, 0x60, 0x1f, 0x93},
 			Output: Package{
 				Header:  Header{1, 0},
-				Config:  Configuration{ChannelCount: 4, Resolution: 6,},
+				Config:  Configuration{ChannelCount: 4, Resolution: 6},
 				Channel: []int{1, 99, 50, 127}}},
 		{
 			Input: []byte{0xc9, 0x3, 0x0, 0x92, 0x3, 0x81, 0xb1, 0xec, 0x8f, 0xc1, 0x93},
